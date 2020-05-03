@@ -13,13 +13,15 @@ import (
 )
 
 type InitClientConfig struct {
+	ConfDir      string
 	ClientConfig IAMClientConfig
 	Scanner      GetInputWrapper
 	HTTPClient   http.Client
 }
 
-func (t *InitClientConfig) InitClient(instance string) (endpoint string, clientResponse ClientResponse, err error) {
-	rbody, err := ioutil.ReadFile("." + instance + ".json")
+func (t *InitClientConfig) InitClient(instance string) (endpoint string, clientResponse ClientResponse, passwd string, err error) {
+
+	rbody, err := ioutil.ReadFile(t.ConfDir + "/" + instance + ".json")
 	if err != nil {
 
 		tmpl, err := template.New("client").Parse(iamTmpl.ClientTemplate)
@@ -51,14 +53,14 @@ func (t *InitClientConfig) InitClient(instance string) (endpoint string, clientR
 			panic(err)
 		}
 
-		fmt.Println(r.StatusCode, r.Status)
+		//fmt.Println(r.StatusCode, r.Status)
 
 		rbody, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			panic(err)
 		}
 
-		fmt.Println(string(rbody))
+		//fmt.Println(string(rbody))
 
 		err = json.Unmarshal(rbody, &clientResponse)
 		if err != nil {
@@ -73,7 +75,7 @@ func (t *InitClientConfig) InitClient(instance string) (endpoint string, clientR
 		}
 		dumpClient := Encrypt(rbody, passwd)
 
-		err = ioutil.WriteFile("."+instance+".json", dumpClient, 0600)
+		err = ioutil.WriteFile(t.ConfDir+"/"+instance+".json", dumpClient, 0600)
 		if err != nil {
 			panic(err)
 		}
@@ -94,5 +96,5 @@ func (t *InitClientConfig) InitClient(instance string) (endpoint string, clientR
 		panic("Something went wrong. No endpoint selected")
 	}
 
-	return endpoint, clientResponse, nil
+	return endpoint, clientResponse, passwd, nil
 }

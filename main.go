@@ -2,55 +2,43 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io"
+	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
+	"time"
 
 	"golang.org/x/oauth2"
 
 	"github.com/minio/minio-go/v6/pkg/credentials"
 
 	"github.com/dciangot/sts-wire/pkg/core"
+	iamTmpl "github.com/dciangot/sts-wire/pkg/template"
 	_ "github.com/go-bindata/go-bindata"
 	"github.com/pkg/browser"
 )
 
-// DownloadFile will download a url to a local file. It's efficient because it will
-// write as it downloads and not load the whole file into memory.
-func DownloadFile(filepath string, url string) error {
-
-	// Get the data
-	resp, err := http.Get(url)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	// Create the file
-	out, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	// Write the body to file
-	_, err = io.Copy(out, resp.Body)
-	return err
+type RCloneStruct struct {
+	Address  string
+	Instance string
+}
+type IAMCreds struct {
+	AccessToken  string
+	RefreshToken string
 }
 
 func main() {
 
+	credsIAM := IAMCreds{}
 	sigint := make(chan int, 1)
-	// get rclone from bindata
-	//_, err := Asset("data/rclone")
-	//if err != nil {
-	//	panic(err)
-	//}
+
 	inputReader := *bufio.NewReader(os.Stdin)
 	scanner := core.GetInputWrapper{
 		Scanner: inputReader,
@@ -65,6 +53,13 @@ func main() {
 	if instance == "-h" {
 		fmt.Println("sts-wire <instance name> <rclone remote path> <local mount point>")
 		return
+	}
+
+	confDir := "." + instance
+
+	_, err := os.Stat(confDir)
+	if os.IsNotExist(err) {
+		os.Mkdir(confDir, os.ModePerm)
 	}
 
 	remote := os.Args[2]
@@ -110,12 +105,13 @@ func main() {
 	}
 
 	clientIAM := core.InitClientConfig{
+		ConfDir:      confDir,
 		ClientConfig: clientConfig,
 		Scanner:      scanner,
 		HTTPClient:   *httpClient,
 	}
 
-	endpoint, clientResponse, err := clientIAM.InitClient(instance)
+	endpoint, clientResponse, _, err := clientIAM.InitClient(instance)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -166,6 +162,15 @@ func main() {
 
 		token := oauth2Token.Extra("access_token").(string)
 
+		credsIAM.AccessToken = token
+		credsIAM.RefreshToken = oauth2Token.Extra("refresh_token").(string)
+
+		err = ioutil.WriteFile(".token", []byte(token), 0600)
+		if err != nil {
+			log.Println(fmt.Errorf("Could not save token file: %s", err))
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		//fmt.Println(token)
 
 		//sts, err := credentials.NewSTSWebIdentity("https://131.154.97.121:9001/", getWebTokenExpiry)
@@ -235,11 +240,77 @@ func main() {
 
 	<-idleConnsClosed
 
-	//log.Fatal(http.ListenAndServe(address, nil))
+	confRClone := RCloneStruct{
+		Address:  "https://131.154.97.121:9001",
+		Instance: instance,
+	}
 
-	err = core.MountVolume(instance, remote, local, "/home/dciangot/.config/rclone/rclone.conf")
+	tmpl, err := template.New("client").Parse(iamTmpl.RCloneTemplate)
 	if err != nil {
 		panic(err)
+	}
+
+	var b bytes.Buffer
+	err = tmpl.Execute(&b, confRClone)
+	if err != nil {
+		panic(err)
+	}
+
+	rclone := b.String()
+
+	err = ioutil.WriteFile(confDir+"/"+"rclone.conf", []byte(rclone), 0600)
+	if err != nil {
+		panic(err)
+	}
+
+	go core.MountVolume(instance, remote, local, confDir)
+
+	// TODO: start routine to keep token valid!
+
+	for {
+		v := url.Values{}
+
+		v.Set("client_id", clientResponse.ClientID)
+		v.Set("client_secret", clientResponse.ClientSecret)
+		v.Set("grant_type", "refresh_token")
+		v.Set("refresh_token", credsIAM.RefreshToken)
+
+		url, err := url.Parse(endpoint + "/token" + "?" + v.Encode())
+
+		req := http.Request{
+			Method: "POST",
+			URL:    url,
+		}
+
+		// TODO: retrieve token with https POST with t.httpClient
+		r, err := httpClient.Do(&req)
+		if err != nil {
+			panic(err)
+		}
+		//fmt.Println(r.StatusCode, r.Status)
+
+		var bodyJSON core.RefreshTokenStruct
+
+		rbody, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			panic(err)
+		}
+
+		//fmt.Println(string(rbody))
+		err = json.Unmarshal(rbody, &bodyJSON)
+		if err != nil {
+			panic(err)
+		}
+
+		// TODO:
+		//encrToken := core.Encrypt([]byte(bodyJSON.AccessToken, passwd)
+
+		err = ioutil.WriteFile(".token", []byte(bodyJSON.AccessToken), 0600)
+		if err != nil {
+			panic(err)
+		}
+
+		time.Sleep(10 * time.Minute)
 	}
 
 }

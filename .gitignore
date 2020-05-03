@@ -1,1 +1,7 @@
 sts-wire
+.minio-dev/*
+.minio-dev
+.token
+rclone
+.vscode
+.vscode/*

@@ -13,6 +13,11 @@ import (
 	"github.com/minio/minio/pkg/auth"
 )
 
+type RefreshTokenStruct struct {
+	RefreshToken string `json:"refresh_token"`
+	AccessToken  string `json:"access_token"`
+}
+
 type IAMClientConfig struct {
 	Port       int
 	ClientName string
@@ -92,7 +97,7 @@ func (t *IAMProvider) Retrieve() (credentials.Value, error) {
 		fmt.Println(err)
 		return credentials.Value{}, err
 	}
-	fmt.Println(r.StatusCode, r.Status)
+	//fmt.Println(r.StatusCode, r.Status)
 
 	t.Creds = &AssumeRoleWithWebIdentityResponse{}
 

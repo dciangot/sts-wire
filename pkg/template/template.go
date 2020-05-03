@@ -29,4 +29,4 @@ env_auth = false
 access_key_id =
 secret_access_key =
 session_token =
-endpoint = https://{{ .Address }}:9001`
+endpoint = {{ .Address }}`
