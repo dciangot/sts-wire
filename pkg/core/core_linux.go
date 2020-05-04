@@ -31,14 +31,14 @@ func DownloadFile(filepath string, url string) error {
 	return err
 }
 
-func DownloadRClone() error {
+func DownloadRClone(configPath string) error {
 
 	_, err := os.Stat("./rclone")
 	if os.IsNotExist(err) {
 
-		fileUrl := "https://golangcode.com/images/avatar.jpg"
+		fileUrl := "https://github.com/dciangot/rclone/releases/download/v1.51.0-patch-s3/rclone-linux-amd64"
 
-		if err := DownloadFile("rclone", fileUrl); err != nil {
+		if err := DownloadFile(configPath+"/rclone", fileUrl); err != nil {
 			return err
 		}
 	}
@@ -48,7 +48,7 @@ func DownloadRClone() error {
 
 func MountVolume(instance string, remotePath string, localPath string, configPath string) error {
 
-	err := DownloadRClone()
+	err := DownloadRClone(configPath)
 	if err != nil {
 		return err
 	}

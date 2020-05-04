@@ -48,7 +48,10 @@ func (t *InitClientConfig) InitClient(instance string) (endpoint string, clientR
 			panic(err)
 		}
 
-		r, err := t.HTTPClient.Post(endpoint+"/register", contentType, strings.NewReader(request))
+		register := endpoint + "/register"
+
+		fmt.Println(register)
+		r, err := t.HTTPClient.Post(register, contentType, strings.NewReader(request))
 		if err != nil {
 			panic(err)
 		}

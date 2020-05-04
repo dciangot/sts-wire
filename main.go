@@ -200,12 +200,13 @@ func main() {
 
 		response := make(map[string]interface{})
 		response["credentials"] = creds
-		c, err := json.MarshalIndent(response, "", "\t")
+		_, err = json.MarshalIndent(response, "", "\t")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Write(c)
+		w.Write([]byte("VOLUME MOUNTED, YOU CAN NOW CLOSE THIS TAB. \n"))
+		//w.Write(c)
 
 		sigint <- 1
 
@@ -263,7 +264,7 @@ func main() {
 		panic(err)
 	}
 
-	go core.MountVolume(instance, remote, local, confDir)
+	core.MountVolume(instance, remote, local, confDir)
 
 	// TODO: start routine to keep token valid!
 

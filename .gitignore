@@ -1,4 +1,6 @@
-sts-wire
+sts-wire_linux
+sts-wire_osx
+sts-wire_windows.exe
 .minio-dev/*
 .minio-dev
 .token

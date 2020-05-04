@@ -29,6 +29,7 @@ func (t *GetInputWrapper) GetInputString(question string, def string) (text stri
 		if err != nil {
 			return "", err
 		}
+		text = strings.Replace(text, "\r\n", "", -1)
 		text = strings.Replace(text, "\n", "", -1)
 
 		if text == "" {

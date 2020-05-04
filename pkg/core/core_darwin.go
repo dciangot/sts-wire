@@ -2,13 +2,6 @@ package core
 
 import (
 	"fmt"
-	"os/exec"
-)
-
-package core
-
-import (
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -38,14 +31,14 @@ func DownloadFile(filepath string, url string) error {
 	return err
 }
 
-func DownloadRClone() error {
+func DownloadRClone(configPath string) error {
 
 	_, err := os.Stat("./rclone")
 	if os.IsNotExist(err) {
 
-		fileUrl := "https://golangcode.com/images/avatar.jpg"
+		fileUrl := "https://github.com/dciangot/rclone/releases/download/v1.51.0-patch-s3/rclone-osx"
 
-		if err := DownloadFile("rclone", fileUrl); err != nil {
+		if err := DownloadFile(configPath+"/rclone", fileUrl); err != nil {
 			return err
 		}
 	}
@@ -55,7 +48,7 @@ func DownloadRClone() error {
 
 func MountVolume(instance string, remotePath string, localPath string, configPath string) error {
 
-	err := DownloadRClone()
+	err := DownloadRClone(configPath)
 	if err != nil {
 		return err
 	}
@@ -63,14 +56,14 @@ func MountVolume(instance string, remotePath string, localPath string, configPat
 	conf := fmt.Sprintf("%s:%s", instance, remotePath)
 
 	grepCmd := exec.Command(
-		"rclone",
+		configPath+"/rclone",
 		"--config",
 		configPath+"/rclone.conf",
 		"--no-check-certificate",
 		"mount",
 		//"--daemon",
 		"--log-file",
-		configPath + "/rclone.log",
+		configPath+"/rclone.log",
 		"--log-level=DEBUG",
 		"--vfs-cache-mode",
 		"full",
