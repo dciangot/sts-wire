@@ -19,7 +19,15 @@ func (t *GetInputWrapper) GetPassword(question string) (password string, err err
 	if err != nil {
 		return "", err
 	}
-	return string(bytePassword), nil
+	fmt.Print("Please re-insert the same now:\n")
+	bytePassword2, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return "", err
+	}
+	if string(bytePassword) == string(bytePassword2) {
+		return string(bytePassword), nil
+	}
+	return "", fmt.Errorf("The two passwords does not look the same.")
 }
 
 func (t *GetInputWrapper) GetInputString(question string, def string) (text string, err error) {

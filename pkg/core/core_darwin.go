@@ -33,14 +33,15 @@ func DownloadFile(filepath string, url string) error {
 
 func DownloadRClone(configPath string) error {
 
-	_, err := os.Stat("./rclone")
+	_, err := os.Stat(configPath + "/rclone")
 	if os.IsNotExist(err) {
 
-		fileUrl := "https://github.com/dciangot/rclone/releases/download/v1.51.0-patch-s3/rclone-osx"
+		fileUrl := "https://github.com/dciangot/rclone/releases/download/v1.51.1-patch-s3/rclone_osx"
 
 		if err := DownloadFile(configPath+"/rclone", fileUrl); err != nil {
 			return err
 		}
+		os.Chmod(configPath+"/rclone", os.FileMode(750))
 	}
 
 	return nil
@@ -51,6 +52,11 @@ func MountVolume(instance string, remotePath string, localPath string, configPat
 	err := DownloadRClone(configPath)
 	if err != nil {
 		return err
+	}
+
+	_, err = os.Stat(localPath)
+	if os.IsNotExist(err) {
+		os.Mkdir(localPath, os.ModePerm)
 	}
 
 	conf := fmt.Sprintf("%s:%s", instance, remotePath)

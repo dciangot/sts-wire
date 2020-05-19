@@ -36,7 +36,7 @@ func DownloadRClone(configPath string) error {
 	_, err := os.Stat(configPath + "\\rclone.exe")
 	if os.IsNotExist(err) {
 
-		fileUrl := "https://github.com/dciangot/rclone/releases/download/v1.51.0-patch-s3/rclone-windows.exe"
+		fileUrl := "https://github.com/dciangot/rclone/releases/download/v1.51.1-patch-s3/rclone.exe"
 
 		if err := DownloadFile(configPath+"\\rclone.exe", fileUrl); err != nil {
 			return err
