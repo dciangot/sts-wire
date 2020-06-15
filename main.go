@@ -18,14 +18,14 @@ func main() {
 		Scanner: inputReader,
 	}
 
-	if len(os.Args) < 4 {
-		fmt.Println("Invalid instance name, please type 'sts-wire -h'  for help")
-		return
-	}
-
 	instance := os.Args[1]
 	if instance == "-h" {
 		fmt.Println("sts-wire <instance name> <s3 endpoint> <rclone remote path> <local mount point>")
+		return
+	}
+
+	if len(os.Args) < 4 {
+		fmt.Println("Invalid instance name, please type 'sts-wire -h'  for help")
 		return
 	}
 
@@ -90,6 +90,11 @@ func main() {
 	endpoint, clientResponse, _, err := clientIAM.InitClient(instance)
 	if err != nil {
 		panic(err)
+	}
+
+	if os.Getenv("REFRESH_TOKEN") != "" {
+		clientResponse.ClientID = "8bed0f49-168f-4c0d-8862-b11af06f2916"
+		clientResponse.ClientSecret = "G7yrGjR_qGcLWS44MadMUMj5xA9_bV1yRcFSdicUx9D0SeJVsGFfk0v5R0MPNT28gQWZ1QStwDe1r_8_xkeyDg"
 	}
 
 	fmt.Println(clientResponse.Endpoint)

@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"text/template"
 	"time"
 
@@ -44,66 +45,155 @@ type Server struct {
 // Start ..
 func (s *Server) Start() error {
 
+	isByHand := os.Getenv("REFRESH_TOKEN")
+	credsIAM := IAMCreds{}
 	endpoint := s.Endpoint
 	clientResponse := s.Response
 
-	credsIAM := IAMCreds{}
-	sigint := make(chan int, 1)
+	if isByHand == "" {
 
-	//fmt.Println(clientResponse.ClientID)
-	//fmt.Println(clientResponse.ClientSecret)
+		endpoint := s.Endpoint
+		clientResponse := s.Response
 
-	ctx := context.Background()
+		sigint := make(chan int, 1)
 
-	config := oauth2.Config{
-		ClientID:     clientResponse.ClientID,
-		ClientSecret: clientResponse.ClientSecret,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  endpoint + "/authorize",
-			TokenURL: endpoint + "/token",
-		},
-		RedirectURL: fmt.Sprintf("http://localhost:%d/oauth2/callback", s.Client.ClientConfig.Port),
-		Scopes:      []string{"address", "phone", "openid", "email", "profile", "offline_access"},
-	}
+		//fmt.Println(clientResponse.ClientID)
+		//fmt.Println(clientResponse.ClientSecret)
 
-	state := RandomState()
+		ctx := context.Background()
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		//log.Printf("%s %s", r.Method, r.RequestURI)
-		if r.RequestURI != "/" {
-			http.NotFound(w, r)
-			return
-		}
-		http.Redirect(w, r, config.AuthCodeURL(state), http.StatusFound)
-	})
-
-	http.HandleFunc("/oauth2/callback", func(w http.ResponseWriter, r *http.Request) {
-		//log.Printf("%s %s", r.Method, r.RequestURI)
-		if r.URL.Query().Get("state") != state {
-			http.Error(w, "state did not match", http.StatusBadRequest)
-			return
+		config := oauth2.Config{
+			ClientID:     clientResponse.ClientID,
+			ClientSecret: clientResponse.ClientSecret,
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  endpoint + "/authorize",
+				TokenURL: endpoint + "/token",
+			},
+			RedirectURL: fmt.Sprintf("http://localhost:%d/oauth2/callback", s.Client.ClientConfig.Port),
+			Scopes:      []string{"address", "phone", "openid", "email", "profile", "offline_access"},
 		}
 
-		oauth2Token, err := config.Exchange(ctx, r.URL.Query().Get("code"))
+		state := RandomState()
+
+		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+			//log.Printf("%s %s", r.Method, r.RequestURI)
+			if r.RequestURI != "/" {
+				http.NotFound(w, r)
+				return
+			}
+			http.Redirect(w, r, config.AuthCodeURL(state), http.StatusFound)
+		})
+
+		http.HandleFunc("/oauth2/callback", func(w http.ResponseWriter, r *http.Request) {
+			//log.Printf("%s %s", r.Method, r.RequestURI)
+			if r.URL.Query().Get("state") != state {
+				http.Error(w, "state did not match", http.StatusBadRequest)
+				return
+			}
+
+			oauth2Token, err := config.Exchange(ctx, r.URL.Query().Get("code"))
+			if err != nil {
+				http.Error(w, "cannot get token", http.StatusBadRequest)
+				return
+			}
+			if !oauth2Token.Valid() {
+				http.Error(w, "token expired", http.StatusBadRequest)
+				return
+			}
+
+			token := oauth2Token.Extra("access_token").(string)
+
+			credsIAM.AccessToken = token
+			credsIAM.RefreshToken = oauth2Token.Extra("refresh_token").(string)
+
+			err = ioutil.WriteFile(".token", []byte(token), 0600)
+			if err != nil {
+				log.Println(fmt.Errorf("Could not save token file: %s", err))
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			//fmt.Println(token)
+
+			//sts, err := credentials.NewSTSWebIdentity("https://131.154.97.121:9001/", getWebTokenExpiry)
+			providers := []credentials.Provider{
+				&IAMProvider{
+					StsEndpoint: s.S3Endpoint,
+					Token:       token,
+					HTTPClient:  &s.Client.HTTPClient,
+				},
+			}
+
+			sts := credentials.NewChainCredentials(providers)
+			if err != nil {
+				log.Println(fmt.Errorf("Could not set STS credentials: %s", err))
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			creds, err := sts.Get()
+			if err != nil {
+				log.Println(fmt.Errorf("Could not get STS credentials: %s", err))
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			//fmt.Println(creds)
+
+			response := make(map[string]interface{})
+			response["credentials"] = creds
+			_, err = json.MarshalIndent(response, "", "\t")
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			w.Write([]byte("VOLUME WILL BE MOUNTED IN FEW SECS, YOU CAN NOW CLOSE THIS TAB. \n"))
+			//w.Write(c)
+
+			sigint <- 1
+
+		})
+
+		address := fmt.Sprintf("localhost:3128")
+		urlBrowse := fmt.Sprintf("http://%s/", address)
+		log.Printf("listening on http://%s/", address)
+		err := browser.OpenURL(urlBrowse)
 		if err != nil {
-			http.Error(w, "cannot get token", http.StatusBadRequest)
-			return
-		}
-		if !oauth2Token.Valid() {
-			http.Error(w, "token expired", http.StatusBadRequest)
-			return
+			panic(err)
 		}
 
-		token := oauth2Token.Extra("access_token").(string)
+		srv := &http.Server{Addr: address}
+
+		idleConnsClosed := make(chan struct{})
+		go func() {
+			<-sigint
+
+			// We received an interrupt signal, shut down.
+			if err := srv.Shutdown(context.Background()); err != nil {
+				// Error from closing listeners, or context timeout:
+				log.Printf("HTTP server Shutdown: %v", err)
+			}
+			close(idleConnsClosed)
+		}()
+
+		if err := srv.ListenAndServe(); err != http.ErrServerClosed {
+			// Error starting or closing listener:
+			log.Fatalf("HTTP server ListenAndServe: %v", err)
+		}
+
+		<-idleConnsClosed
+
+	} else {
+
+		token := os.Getenv("ACCESS_TOKEN")
 
 		credsIAM.AccessToken = token
-		credsIAM.RefreshToken = oauth2Token.Extra("refresh_token").(string)
+		credsIAM.RefreshToken = os.Getenv("REFRESH_TOKEN")
 
-		err = ioutil.WriteFile(".token", []byte(token), 0600)
+		fmt.Printf("Writing down token: %s", token)
+		err := ioutil.WriteFile(".token", []byte(token), 0600)
 		if err != nil {
 			log.Println(fmt.Errorf("Could not save token file: %s", err))
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			panic(err)
 		}
 		//fmt.Println(token)
 
@@ -119,15 +209,13 @@ func (s *Server) Start() error {
 		sts := credentials.NewChainCredentials(providers)
 		if err != nil {
 			log.Println(fmt.Errorf("Could not set STS credentials: %s", err))
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			panic(err)
 		}
 
 		creds, err := sts.Get()
 		if err != nil {
 			log.Println(fmt.Errorf("Could not get STS credentials: %s", err))
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
+			panic(err)
 		}
 
 		//fmt.Println(creds)
@@ -136,44 +224,10 @@ func (s *Server) Start() error {
 		response["credentials"] = creds
 		_, err = json.MarshalIndent(response, "", "\t")
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+			panic(err)
 		}
-		w.Write([]byte("VOLUME WILL BE MOUNTED IN FEW SECS, YOU CAN NOW CLOSE THIS TAB. \n"))
-		//w.Write(c)
 
-		sigint <- 1
-
-	})
-
-	address := fmt.Sprintf("localhost:3128")
-	urlBrowse := fmt.Sprintf("http://%s/", address)
-	log.Printf("listening on http://%s/", address)
-	err := browser.OpenURL(urlBrowse)
-	if err != nil {
-		panic(err)
 	}
-
-	srv := &http.Server{Addr: address}
-
-	idleConnsClosed := make(chan struct{})
-	go func() {
-		<-sigint
-
-		// We received an interrupt signal, shut down.
-		if err := srv.Shutdown(context.Background()); err != nil {
-			// Error from closing listeners, or context timeout:
-			log.Printf("HTTP server Shutdown: %v", err)
-		}
-		close(idleConnsClosed)
-	}()
-
-	if err := srv.ListenAndServe(); err != http.ErrServerClosed {
-		// Error starting or closing listener:
-		log.Fatalf("HTTP server ListenAndServe: %v", err)
-	}
-
-	<-idleConnsClosed
 
 	confRClone := RCloneStruct{
 		Address:  s.S3Endpoint,
@@ -226,6 +280,8 @@ func (s *Server) Start() error {
 	for {
 		v := url.Values{}
 
+		fmt.Println(clientResponse.ClientID, clientResponse.ClientSecret, credsIAM.RefreshToken)
+
 		v.Set("client_id", clientResponse.ClientID)
 		v.Set("client_secret", clientResponse.ClientSecret)
 		v.Set("grant_type", "refresh_token")
@@ -252,6 +308,8 @@ func (s *Server) Start() error {
 			panic(err)
 		}
 
+		fmt.Println(string(rbody))
+
 		//fmt.Println(string(rbody))
 		err = json.Unmarshal(rbody, &bodyJSON)
 		if err != nil {
@@ -260,6 +318,8 @@ func (s *Server) Start() error {
 
 		// TODO:
 		//encrToken := core.Encrypt([]byte(bodyJSON.AccessToken, passwd)
+
+		fmt.Println(bodyJSON.AccessToken)
 
 		err = ioutil.WriteFile(".token", []byte(bodyJSON.AccessToken), 0600)
 		if err != nil {
