@@ -7,3 +7,5 @@ sts-wire_windows.exe
 rclone
 .vscode
 .vscode/*
+mountedVolume
+mountedVolume/*

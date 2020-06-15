@@ -45,6 +45,7 @@ type Server struct {
 // Start ..
 func (s *Server) Start() error {
 
+	state := RandomState()
 	isByHand := os.Getenv("REFRESH_TOKEN")
 	credsIAM := IAMCreds{}
 	endpoint := s.Endpoint
@@ -72,8 +73,6 @@ func (s *Server) Start() error {
 			RedirectURL: fmt.Sprintf("http://localhost:%d/oauth2/callback", s.Client.ClientConfig.Port),
 			Scopes:      []string{"address", "phone", "openid", "email", "profile", "offline_access"},
 		}
-
-		state := RandomState()
 
 		http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 			//log.Printf("%s %s", r.Method, r.RequestURI)
@@ -158,7 +157,10 @@ func (s *Server) Start() error {
 		log.Printf("listening on http://%s/", address)
 		err := browser.OpenURL(urlBrowse)
 		if err != nil {
-			panic(err)
+			log.Println("Failed to open browser, trying to copy the following on you browser.")
+			log.Println(config.AuthCodeURL(state))
+			log.Println("After that copy the resulting address and run the following command on a separate shell: ")
+			log.Println("curl \"<your resulting address e.g. http://localhost:3128/oauth2/callback?code=1tpAd&state=9RpeJxIf>\" ")
 		}
 
 		srv := &http.Server{Addr: address}
