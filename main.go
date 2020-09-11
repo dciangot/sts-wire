@@ -53,6 +53,7 @@ func main() {
 	// }
 
 	clientConfig := core.IAMClientConfig{
+		Host:       "localhost",
 		Port:       3128,
 		ClientName: "oidc-client",
 	}

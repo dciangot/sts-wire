@@ -19,6 +19,7 @@ type RefreshTokenStruct struct {
 }
 
 type IAMClientConfig struct {
+	Host       string
 	Port       int
 	ClientName string
 }

@@ -282,7 +282,7 @@ func (s *Server) Start() error {
 	for {
 		v := url.Values{}
 
-		fmt.Println(clientResponse.ClientID, clientResponse.ClientSecret, credsIAM.RefreshToken)
+		//fmt.Println(clientResponse.ClientID, clientResponse.ClientSecret, credsIAM.RefreshToken)
 
 		v.Set("client_id", clientResponse.ClientID)
 		v.Set("client_secret", clientResponse.ClientSecret)
@@ -310,7 +310,7 @@ func (s *Server) Start() error {
 			panic(err)
 		}
 
-		fmt.Println(string(rbody))
+		//fmt.Println(string(rbody))
 
 		//fmt.Println(string(rbody))
 		err = json.Unmarshal(rbody, &bodyJSON)
@@ -321,7 +321,7 @@ func (s *Server) Start() error {
 		// TODO:
 		//encrToken := core.Encrypt([]byte(bodyJSON.AccessToken, passwd)
 
-		fmt.Println(bodyJSON.AccessToken)
+		//fmt.Println(bodyJSON.AccessToken)
 
 		err = ioutil.WriteFile(".token", []byte(bodyJSON.AccessToken), 0600)
 		if err != nil {
