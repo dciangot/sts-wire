@@ -9,15 +9,16 @@ import (
 	"os"
 	"strings"
 	"text/template"
-
-	iamTmpl "github.com/dciangot/sts-wire/pkg/template"
 )
 
 type InitClientConfig struct {
-	ConfDir      string
-	ClientConfig IAMClientConfig
-	Scanner      GetInputWrapper
-	HTTPClient   http.Client
+	ConfDir        string
+	ClientConfig   IAMClientConfig
+	Scanner        GetInputWrapper
+	HTTPClient     http.Client
+	IAMServer      string
+	ClientTemplate string
+	NoPWD          bool
 }
 
 func (t *InitClientConfig) InitClient(instance string) (endpoint string, clientResponse ClientResponse, passwd string, err error) {
@@ -25,7 +26,7 @@ func (t *InitClientConfig) InitClient(instance string) (endpoint string, clientR
 	rbody, err := ioutil.ReadFile(t.ConfDir + "/" + instance + ".json")
 	if err != nil {
 
-		tmpl, err := template.New("client").Parse(iamTmpl.ClientTemplate)
+		tmpl, err := template.New("client").Parse(t.ClientTemplate)
 		if err != nil {
 			panic(err)
 		}
@@ -46,15 +47,18 @@ func (t *InitClientConfig) InitClient(instance string) (endpoint string, clientR
 
 		fmt.Println(os.Getenv("REFRESH_TOKEN"))
 
-		if os.Getenv("REFRESH_TOKEN") == "" {
+		if os.Getenv("REFRESH_TOKEN") == "" && endpoint == "" {
 
 			endpoint, err = t.Scanner.GetInputString("Insert the IAM endpoint for the instance: ", "https://iam-demo.cloud.cnaf.infn.it")
 			if err != nil {
 				panic(err)
 			}
+		} else if os.Getenv("REFRESH_TOKEN") == "" && endpoint != "" {
+			fmt.Println("getting endpoint from config")
 		} else {
 			endpoint = "https://iam-demo.cloud.cnaf.infn.it"
 		}
+
 		register := endpoint + "/register"
 
 		fmt.Println(register)
@@ -79,42 +83,46 @@ func (t *InitClientConfig) InitClient(instance string) (endpoint string, clientR
 
 		clientResponse.Endpoint = endpoint
 
-		passwd := ""
+		if !t.NoPWD {
+			passwd := ""
 
-		if os.Getenv("REFRESH_TOKEN") == "" {
+			if os.Getenv("REFRESH_TOKEN") == "" {
 
-			passwd, err = t.Scanner.GetPassword("Insert pasword for secrets encryption: ")
+				passwd, err = t.Scanner.GetPassword("Insert pasword for secrets encryption: ")
+				if err != nil {
+					panic(err)
+				}
+			} else {
+				passwd = "asdasdasd"
+			}
+
+			dumpClient := Encrypt(rbody, passwd)
+
+			err = ioutil.WriteFile(t.ConfDir+"/"+instance+".json", dumpClient, 0600)
 			if err != nil {
 				panic(err)
 			}
-		} else {
-			passwd = "asdasdasd"
-		}
-
-		dumpClient := Encrypt(rbody, passwd)
-
-		err = ioutil.WriteFile(t.ConfDir+"/"+instance+".json", dumpClient, 0600)
-		if err != nil {
-			panic(err)
 		}
 	} else {
-		passwd := ""
+		if !t.NoPWD {
+			passwd := ""
 
-		if os.Getenv("REFRESH_TOKEN") == "" {
-			passwd, err = t.Scanner.GetPassword("Insert pasword for secrets decryption: ")
+			if os.Getenv("REFRESH_TOKEN") == "" {
+				passwd, err = t.Scanner.GetPassword("Insert pasword for secrets decryption: ")
+				if err != nil {
+					panic(err)
+				}
+			} else {
+				passwd = "asdasdasd"
+			}
+
+			err = json.Unmarshal(Decrypt(rbody, passwd), &clientResponse)
 			if err != nil {
 				panic(err)
 			}
-		} else {
-			passwd = "asdasdasd"
+			fmt.Println(clientResponse.Endpoint)
+			endpoint = strings.Split(clientResponse.Endpoint, "/register")[0]
 		}
-
-		err = json.Unmarshal(Decrypt(rbody, passwd), &clientResponse)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(clientResponse.Endpoint)
-		endpoint = strings.Split(clientResponse.Endpoint, "/register")[0]
 	}
 
 	if endpoint == "" {

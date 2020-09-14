@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/dciangot/sts-wire/pkg/core"
+	iamTemplate "github.com/dciangot/sts-wire/pkg/template"
 	_ "github.com/go-bindata/go-bindata"
 )
 
@@ -82,10 +83,13 @@ func main() {
 	}
 
 	clientIAM := core.InitClientConfig{
-		ConfDir:      confDir,
-		ClientConfig: clientConfig,
-		Scanner:      scanner,
-		HTTPClient:   *httpClient,
+		ConfDir:        confDir,
+		ClientConfig:   clientConfig,
+		Scanner:        scanner,
+		HTTPClient:     *httpClient,
+		IAMServer:      "",
+		ClientTemplate: iamTemplate.ClientTemplate,
+		NoPWD:          false,
 	}
 
 	endpoint, clientResponse, _, err := clientIAM.InitClient(instance)
