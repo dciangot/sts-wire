@@ -47,14 +47,15 @@ func (t *InitClientConfig) InitClient(instance string) (endpoint string, clientR
 
 		fmt.Println(os.Getenv("REFRESH_TOKEN"))
 
-		if os.Getenv("REFRESH_TOKEN") == "" && endpoint == "" {
+		if os.Getenv("REFRESH_TOKEN") == "" && t.IAMServer == "" {
 
 			endpoint, err = t.Scanner.GetInputString("Insert the IAM endpoint for the instance: ", "https://iam-demo.cloud.cnaf.infn.it")
 			if err != nil {
 				panic(err)
 			}
-		} else if os.Getenv("REFRESH_TOKEN") == "" && endpoint != "" {
-			fmt.Println("getting endpoint from config")
+		} else if os.Getenv("REFRESH_TOKEN") == "" && t.IAMServer != "" {
+			fmt.Println("getting endpoint from config: ", t.IAMServer)
+			endpoint = t.IAMServer
 		} else {
 			endpoint = "https://iam-demo.cloud.cnaf.infn.it"
 		}
