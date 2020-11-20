@@ -1,7 +1,7 @@
 all: build build-windows build-macos
 
-bindata:
-	${HOME}/go/bin/go-bindata data/
+#bindata:
+#	${HOME}/go/bin/go-bindata data/
 
 build:
 	go build -o sts-wire_linux
