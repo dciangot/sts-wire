@@ -78,6 +78,7 @@ func MountVolume(instance string, remotePath string, localPath string, configPat
 		conf,
 		localPath,
 		// TODO: check for ; and malevoulus inputs
+		// alternative: use rclone go methods
 	)
 
 	grepCmd.Start()
