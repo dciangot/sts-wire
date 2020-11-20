@@ -77,6 +77,7 @@ func MountVolume(instance string, remotePath string, localPath string, configPat
 		"--no-modtime",
 		conf,
 		localPath,
+		// TODO: check for ; and malevoulus inputs
 	)
 
 	grepCmd.Start()

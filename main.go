@@ -92,14 +92,17 @@ func main() {
 		NoPWD:          false,
 	}
 
+	// Client registration
 	endpoint, clientResponse, _, err := clientIAM.InitClient(instance)
 	if err != nil {
 		panic(err)
 	}
 
+
+	// TODO: use refresh_token
 	if os.Getenv("REFRESH_TOKEN") != "" {
-		clientResponse.ClientID = "8bed0f49-168f-4c0d-8862-b11af06f2916"
-		clientResponse.ClientSecret = "G7yrGjR_qGcLWS44MadMUMj5xA9_bV1yRcFSdicUx9D0SeJVsGFfk0v5R0MPNT28gQWZ1QStwDe1r_8_xkeyDg"
+		clientResponse.ClientID = ""
+		clientResponse.ClientSecret = ""
 	}
 
 	fmt.Println(clientResponse.Endpoint)

@@ -82,6 +82,8 @@ func (t *IAMProvider) Retrieve() (credentials.Value, error) {
 	body.Set("Action", "AssumeRoleWithWebIdentity")
 	body.Set("Version", "2011-06-15")
 	body.Set("WebIdentityToken", t.Token)
+
+	// TODO: parameter for duration 
 	body.Set("DurationSeconds", "900")
 
 	//fmt.Println(t.stsEndpoint, body.Encode())
