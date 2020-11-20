@@ -98,11 +98,10 @@ func main() {
 		panic(err)
 	}
 
-
 	// TODO: use refresh_token
 	if os.Getenv("REFRESH_TOKEN") != "" {
-		clientResponse.ClientID = ""
-		clientResponse.ClientSecret = ""
+		clientResponse.ClientID = os.Getenv("IAM_CLIENT_ID")
+		clientResponse.ClientSecret = os.Getenv("IAM_CLIENT_SECRET")
 	}
 
 	fmt.Println(clientResponse.Endpoint)
