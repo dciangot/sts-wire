@@ -14,6 +14,22 @@ chmod +x sts-wire
 cp sts-wire /usr/local/bin
 ```
 
+To use it, you need to provide an instance name (of your choice, it is just for storing IAM client configuration, e.g. `myminio`), the path to your bucket or to root `/`, and finally the mount point destination (in this example `./mountedVolume`):
+
+```
+chmod +x ./sts-wire_linux
+./sts-wire_linux  myminio <e.g. https://myserve.com:9000/> / ./mountedVolume
+```
+
+Follow all the instructions, providing a password for credentials encryption when requested.
+Eventually, if everything went fine, on your browser you will be prompted with a message like:
+
+```
+VOLUME MOUNTED, YOU CAN NOW CLOSE THIS TAB. 
+```
+
+The volume will stay mounted untill you exit the running sts-wire process with Control-C
+
 ## Quick start
 
 ## Building from source
