@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- fuse
+- fuse installed
 
 ## Installation and usage
 
