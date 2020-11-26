@@ -11,7 +11,7 @@
 Download the binary from the latest release on [github](https://github.com/DODAS-TS/dodas-go-client/releases). For instance:
 
 ```bash
-wget https://github.com/DODAS-TS/sts-wire/releases/download/v0.0.8/sts-wire
+wget https://github.com/DODAS-TS/sts-wire/releases/download/v0.0.10/sts-wire
 chmod +x sts-wire
 cp sts-wire /usr/local/bin
 ```
@@ -19,8 +19,7 @@ cp sts-wire /usr/local/bin
 To use it, you need to provide an instance name (of your choice, it is just for storing IAM client configuration, e.g. `myminio`), the path to your bucket or to root `/`, and finally the mount point destination (in this example `./mountedVolume`):
 
 ```
-chmod +x ./sts-wire_linux
-./sts-wire_linux  myminio <e.g. https://myserve.com:9000/> / ./mountedVolume
+IAM_SERVER=<you iam server url> ./sts-wire  myminio <e.g. https://myserve.com:9000/> / ./mountedVolume
 ```
 
 Follow all the instructions, providing a password for credentials encryption when requested.
