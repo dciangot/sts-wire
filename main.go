@@ -21,7 +21,7 @@ func main() {
 
 	instance := os.Args[1]
 	if instance == "-h" {
-		fmt.Println("sts-wire <instance name> <s3 endpoint> <rclone remote path> <local mount point>")
+		fmt.Println("IAM_SERVER=\"https://myIAM.com\" sts-wire <instance name> <s3 endpoint> <rclone remote path> <local mount point>")
 		return
 	}
 
@@ -82,12 +82,17 @@ func main() {
 		Transport: tr,
 	}
 
+	iamServer := ""
+	if os.Getenv("IAM_SERVER") != "" {
+		iamServer = os.Getenv("IAM_SERVER")
+	}
+
 	clientIAM := core.InitClientConfig{
 		ConfDir:        confDir,
 		ClientConfig:   clientConfig,
 		Scanner:        scanner,
 		HTTPClient:     *httpClient,
-		IAMServer:      "",
+		IAMServer:      iamServer,
 		ClientTemplate: iamTemplate.ClientTemplate,
 		NoPWD:          false,
 	}
