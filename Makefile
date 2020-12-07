@@ -1,7 +1,13 @@
 all: build build-windows build-macos
 
 #bindata:
-#	${HOME}/go/bin/go-bindata data/
+#	go get -u github.com/go-bindata/go-bindata/...
+#	go-bindata -o rclone_bin.go data/
+
+#data, err := Asset("data/rclone")
+#if err != nil {
+#	// Asset was not found.
+#}
 
 build:
 	go build -o sts-wire_linux

@@ -145,8 +145,9 @@ func (s *Server) Start() error {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			//msg := fmt.Sprintf("CREDENTIALS %s", creds)
+			//w.Write([]byte(msg))
 			w.Write([]byte("VOLUME WILL BE MOUNTED IN FEW SECS, YOU CAN NOW CLOSE THIS TAB. \n"))
-			//w.Write(c)
 
 			sigint <- 1
 
@@ -231,6 +232,9 @@ func (s *Server) Start() error {
 
 	}
 
+	//fmt.Println(s.S3Endpoint)
+	//fmt.Println(s.Instance)
+
 	confRClone := RCloneStruct{
 		Address:  s.S3Endpoint,
 		Instance: s.Instance,
@@ -290,6 +294,8 @@ func (s *Server) Start() error {
 		v.Set("refresh_token", credsIAM.RefreshToken)
 
 		url, err := url.Parse(endpoint + "/token" + "?" + v.Encode())
+
+		//fmt.Println(url.String())
 
 		req := http.Request{
 			Method: "POST",
