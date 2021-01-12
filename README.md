@@ -1,3 +1,5 @@
+** N.B. the software has been moved to [https://github.com/dodas-ts/sts-wire](https://github.com/dodas-ts/sts-wire) **
+
 [![Gitpod ready-to-code](https://img.shields.io/badge/Gitpod-ready--to--code-blue?logo=gitpod)](https://gitpod.io/#https://github.com/dciangot/sts-wire)
 
 # STS WIRE 
